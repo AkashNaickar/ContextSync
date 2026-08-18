@@ -12,7 +12,7 @@
 ## 🚨 The Problem
 You are reviewing code that looks perfect. It has retry logic. It catches exceptions. It passes the linter. It passes CI/CD
 **But it's wrong.**
-Because six months ago, a Staff Engineer mentioned in a Slack thread that "Gateway V2 requires an Idempotency Key".
+Because some months ago, a Staff Engineer mentioned in a Slack thread that "Gateway V2 requires an Idempotency Key".
 You didn't see that message. **ContextSync did.**
 
 ## ✨ Features
