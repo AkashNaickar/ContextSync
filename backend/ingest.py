@@ -1,21 +1,21 @@
-import json
 import os
 import shutil
+
 from dotenv import load_dotenv
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
-DB_PATH = "backend/chroma_db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
 
 from app.services.integrations import IntegrationService
 
 # User Configuration
-SLACK_CHANNEL_ID = "C0AF6J4ELGG"
-JIRA_JQL = "text ~ 'Gateway V2' ORDER BY created DESC"
+SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "")
+JIRA_JQL = os.environ.get("JIRA_JQL", "text ~ 'Gateway V2' ORDER BY created DESC")
 
 def load_real_data():
     """Fetches real data from Slack and Jira."""
@@ -68,9 +68,12 @@ def process_jira_data(data):
 
 def ingest():
     """Main ingestion function."""
-    # Check for API KEY
+    # Check for API KEY and channel config
     if not os.getenv("GOOGLE_API_KEY"):
         print("CRITICAL: GOOGLE_API_KEY not found in environment variables. Please set it in a .env file.")
+        return
+    if not SLACK_CHANNEL_ID:
+        print("CRITICAL: SLACK_CHANNEL_ID not set. Please set it in a .env file.")
         return
 
     print("Loading REAL data from Integrations...")
@@ -95,7 +98,7 @@ def ingest():
         if os.path.exists(DB_PATH):
             shutil.rmtree(DB_PATH)
 
-        vectorstore = Chroma.from_documents(
+        Chroma.from_documents(
             documents=splits,
             embedding=embeddings,
             persist_directory=DB_PATH
