@@ -1,20 +1,34 @@
-import os
 import asyncio
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
-from app.models import ExplainRequest, ExplainResponse, ContextObject, StatsRequest, StatsObject, ChatRequest, ChatResponse
-from typing import List
-from app.services.rag import RAGService
-from app.services.integrations import IntegrationService
-from app.services.data_processing import process_slack_data, process_jira_data, process_confluence_data, process_notion_data
+
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+
+from app.models import (
+    ChatRequest,
+    ChatResponse,
+    ContextObject,
+    ExplainRequest,
+    ExplainResponse,
+    StatsObject,
+    StatsRequest,
+)
+from app.services.data_processing import (
+    process_confluence_data,
+    process_jira_data,
+    process_notion_data,
+    process_slack_data,
+)
+from app.services.integrations import IntegrationService
+from app.services.rag import RAGService
 
 load_dotenv()
 
 rag_service = None
 integration_service = None
-# Config hardcoded for now
-SLACK_CHANNEL_ID = "C0AECA17DM0"
+# Config from environment (see .env.example)
+SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "")
 JIRA_JQL = "resolution = Unresolved ORDER BY created DESC"
 CONFLUENCE_CQL = 'type=page AND title ~ "Payment" ORDER BY lastmodified DESC'
 NOTION_QUERY = os.environ.get("NOTION_SEARCH_QUERY", "")
@@ -95,7 +109,7 @@ async def explain_code(request: ExplainRequest):
     
     return ExplainResponse(markdown=markdown_response)
 
-@app.post("/context/retrieve", response_model=List[ContextObject])  # POST http request
+@app.post("/context/retrieve", response_model=list[ContextObject])  # POST http request
 async def retrieve_context(request: ExplainRequest):
     """Returns structured context objects for the IDE."""
     if not rag_service:
@@ -116,7 +130,7 @@ async def manual_sync():
     """Manually triggers the data sync logic."""
     return await sync_data()
 
-@app.post("/context/stats", response_model=List[StatsObject])
+@app.post("/context/stats", response_model=list[StatsObject])
 async def context_stats(request: StatsRequest):
     """Returns context stats for a list of code snippets."""
     if not rag_service:

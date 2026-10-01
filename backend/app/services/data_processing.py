@@ -1,6 +1,8 @@
 
-from langchain_core.documents import Document
 import re
+
+from langchain_core.documents import Document
+
 
 def process_slack_data(data, channel_id):
     """Converts Slack messages into documents with metadata."""

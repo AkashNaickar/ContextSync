@@ -1,5 +1,6 @@
+
 from pydantic import BaseModel
-from typing import List, Optional
+
 
 class ExplainRequest(BaseModel):
     code_snippet: str
@@ -12,13 +13,13 @@ class ExplainResponse(BaseModel):
 class ContextObject(BaseModel):
     source: str # "slack" or "jira"
     title_or_user: str
-    url: Optional[str] = None
+    url: str | None = None
     content_summary: str
     relevance_score: float = 0.0
-    related_code_files: List[str] = []
+    related_code_files: list[str] = []
 
 class StatsRequest(BaseModel):
-    snippets: List[str]
+    snippets: list[str]
 
 class StatsObject(BaseModel):
     slack_count: int
@@ -27,8 +28,8 @@ class StatsObject(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    history: Optional[List[dict]] = []
-    context: Optional[str] = None
+    history: list[dict] | None = []
+    context: str | None = None
 
 class ChatResponse(BaseModel):
     reply: str

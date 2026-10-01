@@ -3,21 +3,36 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
-.env
 .venv/
+.env
 backend/chroma_db/
+chroma_db/
+backend/backend/
+
+# Throwaway exploration scripts and environment dumps
+backend/test_*.py
+backend/query_test.py
+backend/demo_retrieve.py
+backend/list_models*.py
+backend/list_slack_channels.py
+backend/check_embedding_models.py
+backend/setup_fake_confluence.py
+backend/ingest_notion.py
+backend/installed_packages*.txt
+backend/available_models.txt
+backend/models.txt
 
 # Node.js
 node_modules/
 dist/
 out/
 .vscode-test/
+*.vsix
 
 # VS Code
 .vscode/
 !.vscode/launch.json
 !.vscode/tasks.json
-*.vsix
 
 # Logs
 *.log

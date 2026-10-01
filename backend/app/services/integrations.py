@@ -1,9 +1,11 @@
 import os
+
+from atlassian import Confluence
+from jira import JIRA
+from notion_client import Client
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from jira import JIRA
-from atlassian import Confluence
-from notion_client import Client
+
 
 class IntegrationService:
     def __init__(self):
@@ -175,7 +177,7 @@ class IntegrationService:
                         title = "Untitled"
                         props = page.get("properties", {})
                         # Iterate to find the 'title' property type
-                        for key, val in props.items():
+                        for val in props.values():
                             if val["type"] == "title" and val["title"]:
                                 title = val["title"][0]["plain_text"]
                                 break
