@@ -1,84 +1,146 @@
-# 🧠 ContextSync: Institutional Memory as a Service
+# ContextSync — Institutional Memory as a Service
 
-![Status](https://img.shields.io/badge/Status-Prototype-blue)
-![Python](https://img.shields.io/badge/Backend-FastAPI-blue?logo=fastapi)
+[![CI](https://github.com/AkashNaickar/ContextSync/actions/workflows/ci.yml/badge.svg)](https://github.com/AkashNaickar/ContextSync/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Backend](https://img.shields.io/badge/Backend-FastAPI-blue?logo=fastapi)
 ![Extension](https://img.shields.io/badge/VS_Code-TypeScript-blue?logo=visualstudiocode)
-![AI](https://img.shields.io/badge/AI-Gemini_3_Pro-purple?logo=google)
+![AI](https://img.shields.io/badge/AI-Gemini-purple?logo=google)
 
-> **Stop Coding in the Dark.** ContextSync bridges the gap between your IDE and your team's conversations, preventing "invisible bugs" by surfacing critical historical context.
+> **Stop coding in the dark.** ContextSync bridges your IDE and your team's conversations, surfacing critical historical context (Slack threads, Jira tickets, Confluence pages, Notion docs) right where you write code.
 
----
+**Live backend:** https://contextsync-backend.onrender.com (health check at `/`)
 
-## 🚨 The Problem
-You are reviewing code that looks perfect. It has retry logic. It catches exceptions. It passes the linter. It passes CI/CD
+## The problem
+
+You are reviewing code that looks perfect. It has retry logic. It catches exceptions. It passes the linter. It passes CI/CD.
 **But it's wrong.**
-Because some months ago, a Staff Engineer mentioned in a Slack thread that "Gateway V2 requires an Idempotency Key".
+Because months ago, a staff engineer mentioned in a Slack thread that "Gateway V2 requires an Idempotency Key".
 You didn't see that message. **ContextSync did.**
 
-## ✨ Features
-*   **🕵️ Explain Intent**: Highlights code and explains *why* it exists based on historical context, not just syntax.
-*   **📇 Context Cards**: Surfaces raw Slack threads and Jira tickets directly in your sidebar.
-*   **🧠 RAG Engine**: Uses a Vector Database (ChromaDB) to perform semantic search across your entire engineering history.
-*   **⚡ Instant Insight**: Turns a 30-minute investigation into a 3-second sidebar lookup.
+## Features
 
-## 🏗️ Architecture
+- **Explain intent** — highlight code and get an explanation of *why* it exists based on historical context, not just syntax.
+- **Context cards** — raw Slack threads and Jira tickets surfaced directly in a VS Code sidebar.
+- **RAG engine** — ChromaDB vector search across your engineering history (Slack, Jira, Confluence, Notion).
+- **Background sync** — polls connected sources every 60 seconds; manual sync via `POST /context/sync`.
+- **Chat** — ask questions with optional code context attached.
+
+## Architecture
+
 ```mermaid
 graph LR
-    IDE[VS Code] -->|Code Snippet| API[Backend API]
-    API -->|Vector Search| DB[(ChromaDB)]
-    DB -->|Retrieved Context| LLM[Gemini 3 Pro]
-    LLM -->|Insight| IDE
+    IDE[VS Code extension] -->|code snippet| API[FastAPI backend]
+    API -->|vector search| DB[(ChromaDB)]
+    SRC[Slack / Jira / Confluence / Notion] -->|60s poll| API
+    DB -->|retrieved context| LLM[Gemini]
+    LLM -->|insight| IDE
 ```
 
-## 📊 Flowchart:
+## API
 
-<img width="1850" height="951" alt="Screenshot 2026-02-13 002400" src="https://github.com/user-attachments/assets/0872023f-a042-438e-b336-74c252c79e08" />
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/` | Health check |
+| POST | `/explain` | Markdown explanation of a code snippet using retrieved context |
+| POST | `/context/retrieve` | Structured context objects for the IDE |
+| POST | `/context/stats` | Slack/Jira counts for a batch of snippets |
+| POST | `/chat` | Chat with Gemini, optional context |
+| POST | `/context/sync` | Manually trigger ingestion from connected sources |
+| POST | `/context/ingest` | Webhook receiver for external events |
 
-<a href="https://excalidraw.com/#json=tDGUWnc8xLdYVLTPOpl-8,nbXH2PbfV91m5paLQ4lBiQ">Excalidraw</a>
-## 💻 Preview
+## Quick start
 
-https://github.com/user-attachments/assets/1a8b9b99-b190-49e3-8f47-3fefc5b9abe7
-
-
-
-
-
-
-## 📦 Installation & Setup
-
-### 1. Backend Service
-The brain of the operation. Runs locally on port `8000`.
+### 1. Backend
 
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Create .env file with GOOGLE_API_KEY=your_key
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt -r requirements-dev.txt
+cp .env.example .env            # then fill in GOOGLE_API_KEY (required)
 uvicorn app.main:app --reload
 ```
 
-### 2. VS Code Extension
-The frontend interface.
+The server starts even without integration credentials — only the root health check and webhook endpoints work until `GOOGLE_API_KEY` is set.
+
+### 2. VS Code extension
 
 ```bash
 cd vscode-extension
 npm install
 npm run compile
-# Press F5 to launch the Extension Host
+# Press F5 to launch the Extension Development Host
 ```
 
-## 🎥 Scenario Demo
-Included in this repo is a `demo/` folder containing a dangerous payment processor script (`payment_processor.py`). Use this to demonstrate how ContextSync detects the missing "Idempotency Key" by cross-referencing mock Slack data.
+Set `contextsync.apiBaseUrl` in VS Code settings to point at your backend (default `http://127.0.0.1:8000`).
 
-## 🤝 Contributing
-Contributions are welcome! Please fork the repository and open a pull request.
+### 3. Run the tests
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+```bash
+cd backend
+pytest -q
+ruff check app tests ingest.py
+```
 
----
+## Environment variables
+
+Copy `.env.example` to `backend/.env`. Only `GOOGLE_API_KEY` is required; everything else enables an optional integration.
+
+| Variable | Required | Used for |
+|----------|----------|----------|
+| `GOOGLE_API_KEY` | Yes | Gemini embeddings + chat |
+| `SLACK_BOT_TOKEN` | No | Live Slack ingestion |
+| `SLACK_SIGNING_SECRET` | No | Slack webhook verification |
+| `SLACK_CHANNEL_ID` | No | Which Slack channel to poll |
+| `JIRA_DOMAIN` | No | Jira cloud domain |
+| `JIRA_EMAIL` | No | Jira auth email |
+| `JIRA_API_TOKEN` | No | Jira API token |
+| `JIRA_JQL` | No | Jira query (has sensible default) |
+| `CONFLUENCE_URL` | No | Confluence base URL |
+| `CONFLUENCE_USERNAME` | No | Confluence auth |
+| `CONFLUENCE_API_TOKEN` | No | Confluence API token |
+| `NOTION_API_KEY` | No | Notion integration token |
+| `NOTION_SEARCH_QUERY` | No | Notion search query |
+
+## Deployment
+
+The backend ships with a `Dockerfile` (in `backend/`) and a `render.yaml` blueprint.
+
+### Render (used for the live demo)
+
+1. In the Render dashboard, create a **Web Service** from this repo.
+2. Root directory `backend`, runtime Python 3.11, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+3. Add the environment variables from the table above (at minimum `GOOGLE_API_KEY`).
+4. Free-tier instances sleep after inactivity; the first request after a cold start may take ~30s.
+
+### Docker
+
+```bash
+cd backend
+docker build -t contextsync-backend .
+docker run -p 8000:8000 --env-file .env contextsync-backend
+```
+
+The VS Code extension is not deployable to a URL — it runs inside VS Code via F5 or a packaged `.vsix`.
+
+## Demo scenario
+
+The `demo/` folder contains a deliberately dangerous payment processor (`payment_processor.py`). Use it to see ContextSync detect the missing "Idempotency Key" by cross-referencing Slack history.
+
+## Roadmap
+
+- [ ] Per-relevance scoring surfaced in context cards (currently a placeholder `0.0`)
+- [ ] Slack webhook-driven ingestion instead of 60s polling
+- [ ] Extension test suite (VS Code extension host tests)
+- [ ] Persisted ChromaDB on a managed volume for cloud deploys
+
+## Contributing
+
+1. Fork the repo and create a branch (`git checkout -b feature/my-feature`)
+2. Make your change and add tests
+3. Run `pytest -q` and `ruff check` in `backend/`
+4. Open a pull request
+
+## License
+
+[MIT](LICENSE)
