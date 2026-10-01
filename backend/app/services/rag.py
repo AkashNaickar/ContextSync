@@ -2,22 +2,19 @@
 
 import os
 import re
-from functools import lru_cache
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+
 from langchain_chroma import Chroma
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+
 from app.models import ContextObject
-from typing import List
+
 
 class RAGService:
     def __init__(self):
         self._init_resources()
-    
-    @lru_cache(maxsize=1)
-    def _get_embeddings(self):
-        return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
     def _init_resources(self):
         """Initialize ChromaDB and LLM."""
@@ -25,11 +22,11 @@ class RAGService:
         current_dir = os.path.dirname(os.path.abspath(__file__)) # app/services
         backend_root = os.path.dirname(os.path.dirname(current_dir)) # backend
         db_path = os.path.join(backend_root, "chroma_db")
-        
+
         try:
             self.db = Chroma(
-                persist_directory=db_path, 
-                embedding_function=self._get_embeddings()
+                persist_directory=db_path,
+                embedding_function=GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
             )
             self.llm = ChatGoogleGenerativeAI(
                 model="gemini-3-pro-preview",
@@ -124,7 +121,7 @@ class RAGService:
         # return f"**Summary**: {summary.content}\n\n**Raw Source**:\n{content}"
         return f"**Snippet**: {content[:300]}...\n\n**Raw Source**:\n{content}"
 
-    async def get_context_objects(self, code_snippet: str) -> List[ContextObject]:
+    async def get_context_objects(self, code_snippet: str) -> list[ContextObject]:
         """Retrieves structured context objects with LLM summaries."""
         keywords = self._extract_keywords(code_snippet)
         search_query = f"{code_snippet}\nKeywords: {keywords}"
@@ -153,10 +150,12 @@ class RAGService:
             objects.append(obj)
         return objects
 
-    async def chat_with_gemini(self, message: str, history: List[dict] = [], context: str = None) -> str:
+    async def chat_with_gemini(self, message: str, history: list[dict] | None = None, context: str | None = None) -> str:
         """Chats with Gemini, optionally using provided context."""
         if not self.llm:
             return "Context Engine is not initialized."
+
+        history = history or []
 
         # Construct Prompt
         system_prompt = """You are ContextSync, an intelligent coding assistant integrated into VS Code.
@@ -182,8 +181,7 @@ class RAGService:
         # Add current context if available
         # Fix: We want to treat the user's message as a VARIABLE, not part of the template structure.
         # This prevents curly braces in code from breaking the PromptTemplate.
-        
-        prompt_template_str = ""
+
         user_content_str = message
         
         if context:
@@ -200,7 +198,7 @@ class RAGService:
         })
         return response
 
-    def add_documents(self, documents: List[Document]):
+    def add_documents(self, documents: list[Document]):
         """Adds new documents to the vector store."""
         if not self.db:
             return
@@ -239,7 +237,7 @@ class RAGService:
                 else:
                     print(f"Error adding documents: {e}")
 
-    async def get_context_stats_batch(self, snippets: List[str]) -> List[dict]:
+    async def get_context_stats_batch(self, snippets: list[str]) -> list[dict]:
         """Retrieves stats for a list of code snippets."""
         if not self.db:
             return [{"slack_count": 0, "jira_count": 0, "open_jira_count": 0} for _ in snippets]

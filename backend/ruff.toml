@@ -1,0 +1,4 @@
+# Blind excepts are intentional around external API calls (Slack/Jira/Confluence/Notion/LLM)
+# where any failure should degrade gracefully instead of crashing the service.
+[lint]
+ignore = ["BLE001"]
